@@ -1,0 +1,167 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    /*
+    
+    //ALU:
+    //zx, // zero the x input?
+    //nx, // negate the x input?
+    //zy, // zero the y input?
+    //ny, // negate the y input?
+    //f,  // compute out = x + y (if 1) or x & y (if 0)
+    //no; // negate the out output?
+
+    //Register:
+    //16-bit register:
+    //If load[t] == 1 then out[t+1] = in[t]
+    //else out does not change  
+    //IN in[16], load;
+    //OUT out[16];
+
+    //Breakdown:
+    //instruction
+    //15..........3210
+    //ixxaccccccdddjjj
+    //xx=nothing
+    //i==opcode==0 for A instruction  1 for C instruction
+    //Incase of A instruction store everything in the A register
+    //Incase of C instruction:
+    //a==operate on the A register or M input
+    //c==determines which function ALU will compute==c1:zx c2:nx c3:zy c4:ny c5:f c6:no
+    //d==which registers to store the result in==d1:A d2:M d3:D
+    //j==Branching logic for fetching next operation==jump conditions: j1:out<0 j2:out==0 j3:out>0
+    //if all are set to zero just fetch next instruction
+    //if all are 1 the unconditional jump 
+    //jmp location is stored in the A register
+
+    //constant 16bit 0 for utility
+    Not16(in=instruction, out=notinstruction);
+    Inc16(in=notinstruction, out=incnotinstruction);
+    Add16(a=instruction, b=incnotinstruction, out=const16zr, out[0]=const0);
+    //instruction routing
+    DMux16(in=instruction, sel=instruction[15], a=Ainstruction, b=Cinstruction, 
+    b[15]=ibit,
+
+    b[12]=abit,
+
+    b[11]=cbit1,
+    b[10]=cbit2,
+    b[9]=cbit3,
+    b[8]=cbit4,
+    b[7]=cbit5,
+    b[6]=cbit6,
+
+    b[5]=dbit1,
+    b[4]=writeM,
+    b[3]=dbit3,
+
+    b[2]=jbit1,
+    b[1]=jbit2,
+    b[0]=jbit3);
+    //A instruction handling
+    Not(in=instruction[15], out=notOpcode);
+    Mux16(a=Ainstruction, b=ALUout, sel=dbit1, out=AorALU);
+    ARegister(in=AorALU, load=notOpcode, out=Aregout);
+    //C instruction handling
+    //a bit
+    Mux16(a=Aregout, b=inM, sel=abit, out=abitrouting);
+    //c bits
+    ALU(x=abitrouting, y=Dregout, 
+    zx=cbit1, nx=cbit2, zy=cbit3, ny=cbit4, f=cbit5, no=cbit6,
+    out=outM, out=ALUout,
+    zr=ALUzr, ng=ALUng);
+    //D register
+    DRegister(in=ALUout, load=dbit3, out=Dregout);
+    //PC and jumping
+    Or8Way(
+    in[0]=jbit1, 
+    in[1]=jbit2,
+    in[2]=jbit3,
+    in[3]=jbit1, 
+    in[4]=jbit2,
+    in[5]=jbit3,
+    in[6]=jbit1, 
+    in[7]=jbit2, 
+    out=temp1);
+    Not(in=temp1, out=incAddress);
+    
+    Not(in=const0, out=const1);
+
+    //Or16Way(in=pco, out=resetorinc);
+
+    //Mux16(a=const16zr, b=pco, sel=resetorinc, out=pcin);
+
+    PC(in=const16zr, load=const0, inc=const1, reset=reset, out[0..14]=pc);
+
+    */
+
+     //where to write output 
+    And(a=instruction[15], b=instruction[3], out=writeM); //YAY
+    And(a=instruction[15], b=instruction[4], out=writeD);
+    Not(in=instruction[15], out=writeA1);
+    And(a=instruction[15], b=instruction[5], out=writeA2);
+    Or(a=writeA1, b=writeA2, out=writeA);
+
+    Mux16(a=instruction, b=ALUResult, sel=instruction[15], out=AorC);
+    ARegister(in=AorC, load=writeA, out=storedA, out[0..14]=addressM); //YAY
+    Mux(a=true, b=instruction[12], sel=instruction[15], out=AorM);
+    Mux16(a=storedA, b=inM, sel=AorM, out=A);
+    
+    //Do a jump?
+    And(a=zr, b=instruction[1], out=doJumpIfZero);
+    And(a=ng, b=instruction[2], out=doJumpIfNG);
+    Not(in=zr, out=notZR);
+    Not(in=ng, out=notNG);
+    And(a=notZR, b=notNG, out=notZRandNG);
+    And(a=notZRandNG, b=instruction[0], out=doJumpIfPos);
+    Or(a=doJumpIfZero, b=doJumpIfNG, out=doJump1);
+    Or(a=doJump1, b=doJumpIfPos, out=doJump2);
+    And(a=doJump2, b=instruction[15], out=doJump);
+    Not(in=doJump, out=notDoJump);
+
+    PC(in=storedA, inc=notDoJump, load=doJump, reset=reset, out[0..14]=pc); //YAY
+
+    ALU(x=D, y=A, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], 
+        f=instruction[7], no=instruction[6], zr=zr, ng=ng,
+        out=ALUResult, out=DRegLookup, out=outM); //YAY
+
+    DRegister(in=DRegLookup, load=writeD, out=D);
+}

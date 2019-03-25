@@ -1,0 +1,12 @@
+CHIP Inc {
+    IN in;
+    OUT sum, carry;
+
+    PARTS:
+
+    
+    Not(in=in, out=sum);
+
+    Not(in=in, out=Notin);
+    Not(in=Notin, out=carry);
+}
